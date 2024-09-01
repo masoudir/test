@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Bluetooth Data Receiver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #data {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ESP32 Bluetooth Data Receiver</h1>
+    <button id="connectButton">Connect to ESP32</button>
+    <div id="data">No data received yet.</div>
+
+    <script>
+        const connectButton = document.getElementById('connectButton');
+        const dataDisplay = document.getElementById('data');
+
+        let bluetoothDevice;
+        let characteristic;
+
+        async function onButtonClick() {
+            try {
+                // Request the Bluetooth device
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32_BT' }],
+                    optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+                });
+
+                // Connect to the GATT server
+                const server = await bluetoothDevice.gatt.connect();
+
+                // Get the service and characteristic
+                const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+                characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+
+                // Subscribe to notifications
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+
+                dataDisplay.innerText = "Connected to ESP32. Waiting for data...";
+
+            } catch (error) {
+                console.error('Error:', error);
+                dataDisplay.innerText = 'Failed to connect or get data';
+            }
+        }
+
+        function handleCharacteristicValueChanged(event) {
+            const value = event.target.value.getUint8(0);
+            dataDisplay.innerText = `Received value: ${value}`;
+        }
+
+        connectButton.addEventListener('click', onButtonClick);
+    </script>
+
+</body>
+</html>
